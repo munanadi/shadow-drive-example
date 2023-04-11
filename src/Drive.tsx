@@ -4,6 +4,7 @@ import {
   StorageAccountResponse,
   ShadowDriveVersion,
 } from "@shadow-drive/sdk";
+import { bytesToHuman } from "@shadow-drive/sdk/dist/utils/helpers";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as anchor from "@project-serum/anchor";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -26,30 +27,8 @@ import {
   Grid,
   Divider,
 } from "@mui/material";
+import { useShadowDrive } from "./hooks/useShadowDrive";
 
-const bytesToHuman = (bytes: any, si = false, dp = 1) => {
-  const thresh = si ? 1024 : 1024;
-
-  if (Math.abs(bytes) < thresh) {
-    return bytes + " B";
-  }
-
-  const units = si
-    ? ["KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
-    : ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
-  let u = -1;
-  const r = 10 ** dp;
-
-  do {
-    bytes /= thresh;
-    ++u;
-  } while (
-    Math.round(Math.abs(bytes) * r) / r >= thresh &&
-    u < units.length - 1
-  );
-
-  return bytes.toFixed(dp) + " " + units[u];
-};
 /**
  *
  * Simple usage examples for Shadow Drive
@@ -59,8 +38,10 @@ const bytesToHuman = (bytes: any, si = false, dp = 1) => {
  */
 export default function Drive() {
   const { connection } = useConnection();
-  const [drive, setDrive] = useState<ShdwDrive>();
   const wallet = useWallet();
+
+  const { connected, publicKey } = wallet;
+
   const [acc, setAcc] = useState<StorageAccountResponse>();
   const [accs, setAccs] = useState<Array<StorageAccountResponse>>([]);
   const [fileList, setFileList] = useState<any>();
@@ -73,6 +54,11 @@ export default function Drive() {
   const [tx, setTx] = useState<String>();
   const [version, setVersion] = useState<ShadowDriveVersion>("v2");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+
+  const { drive, getStorageAccounts, getAllFiles } = useShadowDrive(
+    wallet,
+    connection
+  );
 
   const submitForm = async () => {
     if (!acc?.publicKey || !fileList) return;
@@ -159,23 +145,15 @@ export default function Drive() {
     } catch (e) {
       console.log(e);
     }
-    refreshAccounts();
     setLoading(false);
   };
 
   useEffect(() => {
     (async () => {
-      if (wallet) {
-        const drive = await new ShdwDrive(connection, wallet).init();
-        await setDrive(drive);
-      }
+      const accs = await getStorageAccounts();
+      setAccs(accs);
     })();
-  }, [wallet.connected]);
-
-  const refreshAccounts = async () => {
-    const accounts = await drive?.getStorageAccounts("v2");
-    setAccs(accounts!);
-  };
+  }, [drive, loading]);
 
   const handleDelete = async (fileUrl: string) => {
     if (!drive || !acc) {
@@ -187,12 +165,6 @@ export default function Drive() {
   };
 
   useEffect(() => {
-    if (drive) {
-      refreshAccounts();
-    }
-  }, [drive]);
-
-  useEffect(() => {
     console.log("uploaded");
     if (displayFiles) {
       console.log(uploadLocs);
@@ -201,21 +173,17 @@ export default function Drive() {
   }, [uploadLocs]);
 
   async function getFiles() {
-    const listObjects = await drive?.listObjects(acc?.publicKey!);
-    const files =
-      listObjects?.keys.map((fileName) => {
-        let url = `https://shdw-drive.genesysgo.net/${acc?.publicKey}/${fileName}`;
-        return new URL(url).toString();
-      }) ?? [];
-
-    setUploadedFiles(files);
+    if (acc) {
+      const files = await getAllFiles(acc.publicKey);
+      setUploadedFiles(files);
+    }
   }
 
   useEffect(() => {
     if (acc) {
       getFiles();
     }
-  }, [acc, drive]);
+  }, [acc]);
 
   return (
     <Container>
@@ -322,7 +290,9 @@ export default function Drive() {
             {tx ? (
               <div>
                 Account Created:{" "}
-                <a href={`https://explorer.solana.com/tx/${tx}?cluster=custom`}>
+                <a
+                  href={`https://explorer.solana.com/tx/${tx}?cluster=mainnet-beta`}
+                >
                   {tx.slice(0, 8)}
                 </a>
               </div>
