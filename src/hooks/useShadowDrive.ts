@@ -12,7 +12,9 @@ import { WalletContextState } from "@solana/wallet-adapter-react";
 
 export interface ShadowDriveHook {
   drive: ShdwDrive | null;
-  getStorageAccounts: () => Promise<StorageAccountResponse[] | []>;
+  getStorageAccounts: (
+    skipDeleted?: boolean
+  ) => Promise<StorageAccountResponse[] | []>;
   findUrlByFileName: (
     fileName: string,
     storageAccountPublickey: PublicKey
@@ -20,20 +22,27 @@ export interface ShadowDriveHook {
   getOrCreateStorageAccountByName: (
     storageAccountName: string
   ) => Promise<StorageAccount | undefined>;
-  getAllFiles: (storageAccountAddress: PublicKey) => Promise<string[]>;
+  getAllFiles: (
+    storageAccountAddress: PublicKey
+  ) => Promise<string[]>;
 }
 
 export const useShadowDrive = (
   wallet: WalletContextState,
   connection: Connection
 ): ShadowDriveHook => {
-  const [drive, setDrive] = useState<ShdwDrive | null>(null);
+  const [drive, setDrive] = useState<ShdwDrive | null>(
+    null
+  );
 
   const { connected } = wallet;
 
   useEffect(() => {
     const initDrive = async () => {
-      const drive = await new ShdwDrive(connection, wallet).init();
+      const drive = await new ShdwDrive(
+        connection,
+        wallet
+      ).init();
       setDrive(drive);
     };
 
@@ -48,13 +57,23 @@ export const useShadowDrive = (
 
   /**
    * Returns a list of storage accounts under the wallet or []
+   * by default returns all accounts, use param to skip marked for deleted
+   * @param skipDeleted false by default, true to skip marked for deletion files
    */
-  const getStorageAccounts = async () => {
+  const getStorageAccounts = async (
+    skipDeleted?: boolean
+  ) => {
     if (!drive) {
       return [];
     }
 
     let accounts = await drive.getStorageAccounts("v2");
+
+    if (skipDeleted) {
+      accounts = accounts.filter(
+        (acc) => !acc.account.toBeDeleted
+      );
+    }
 
     if (!accounts) {
       return [];
@@ -79,7 +98,8 @@ export const useShadowDrive = (
     }
 
     const retrieveFileName =
-      (await drive.listObjects(storageAccountPublickey)) ?? [];
+      (await drive.listObjects(storageAccountPublickey)) ??
+      [];
 
     let fileUrl;
 
@@ -115,7 +135,11 @@ export const useShadowDrive = (
     // If storage account not found with the same name create one
     if (!account) {
       try {
-        await drive.createStorageAccount(storageAccountName, "1GB", "v2");
+        await drive.createStorageAccount(
+          storageAccountName,
+          "1GB",
+          "v2"
+        );
       } catch (e) {
         throw new Error("Error creating storage bucket");
       }
@@ -128,7 +152,9 @@ export const useShadowDrive = (
    * Get all files by their URL given a storage account address
    */
   const getAllFiles = async (accountAddress: PublicKey) => {
-    const listObjects = await drive?.listObjects(accountAddress);
+    const listObjects = await drive?.listObjects(
+      accountAddress
+    );
     const files =
       listObjects?.keys.map((fileName) => {
         let url = `https://shdw-drive.genesysgo.net/${accountAddress}/${fileName}`;

@@ -5,7 +5,10 @@ import {
   ShadowDriveVersion,
 } from "@shadow-drive/sdk";
 import { bytesToHuman } from "@shadow-drive/sdk/dist/utils/helpers";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import {
+  useConnection,
+  useWallet,
+} from "@solana/wallet-adapter-react";
 import * as anchor from "@project-serum/anchor";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey } from "@solana/web3.js";
@@ -43,22 +46,27 @@ export default function Drive() {
   const { connected, publicKey } = wallet;
 
   const [acc, setAcc] = useState<StorageAccountResponse>();
-  const [accs, setAccs] = useState<Array<StorageAccountResponse>>([]);
+  const [accs, setAccs] = useState<
+    Array<StorageAccountResponse>
+  >([]);
   const [fileList, setFileList] = useState<any>();
   const [displayFiles, setDisplayFiles] = useState<any>();
-  const [radioValue, setRadioValue] = useState<PublicKey | String>();
+  const [radioValue, setRadioValue] = useState<
+    PublicKey | String
+  >();
   const [uploadLocs, setUploadLocs] = useState<any>();
   const [accName, setAccName] = useState<string>("");
   const [accSize, setAccSize] = useState<string>("1GB");
   const [loading, setLoading] = useState<boolean>();
   const [tx, setTx] = useState<String>();
-  const [version, setVersion] = useState<ShadowDriveVersion>("v2");
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [version, setVersion] =
+    useState<ShadowDriveVersion>("v2");
+  const [uploadedFiles, setUploadedFiles] = useState<
+    string[]
+  >([]);
 
-  const { drive, getStorageAccounts, getAllFiles } = useShadowDrive(
-    wallet,
-    connection
-  );
+  const { drive, getStorageAccounts, getAllFiles } =
+    useShadowDrive(wallet, connection);
 
   const submitForm = async () => {
     if (!acc?.publicKey || !fileList) return;
@@ -71,12 +79,19 @@ export default function Drive() {
     };
 
     // Construct the file to upload
-    let f = new File([JSON.stringify(data)], "example.json", {
-      type: "application/json",
-    });
+    let f = new File(
+      [JSON.stringify(data)],
+      "example.json",
+      {
+        type: "application/json",
+      }
+    );
 
     try {
-      const uploadResponse = await drive?.uploadFile(acc?.publicKey!, f);
+      const uploadResponse = await drive?.uploadFile(
+        acc?.publicKey!,
+        f
+      );
       console.log(uploadResponse);
       await setUploadLocs(uploadResponse);
     } catch (e) {
@@ -85,7 +100,9 @@ export default function Drive() {
     await renderFiles();
   };
 
-  const listFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const listFiles = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (e.target.files) {
       const displayFiles = [];
       for (const file of e.target.files) {
@@ -148,9 +165,21 @@ export default function Drive() {
     setLoading(false);
   };
 
+  const deleteAccount = async () => {
+    if (!drive || !acc) {
+      return;
+    }
+    const del = await drive?.deleteStorageAccount(
+      acc.publicKey,
+      "v2"
+    );
+    console.log(del);
+    await getStorageAccounts(true);
+  };
+
   useEffect(() => {
     (async () => {
-      const accs = await getStorageAccounts();
+      const accs = await getStorageAccounts(true);
       setAccs(accs);
     })();
   }, [drive, loading]);
@@ -159,7 +188,11 @@ export default function Drive() {
     if (!drive || !acc) {
       return;
     }
-    const delFile = await drive.deleteFile(acc.publicKey, fileUrl, "v2");
+    const delFile = await drive.deleteFile(
+      acc.publicKey,
+      fileUrl,
+      "v2"
+    );
     getFiles();
     console.log(delFile);
   };
@@ -189,7 +222,12 @@ export default function Drive() {
     <Container>
       <Grid container>
         <Grid item xs={12} justifyContent="center">
-          <h1 style={{ marginBottom: "20px", textAlign: "center" }}>
+          <h1
+            style={{
+              marginBottom: "20px",
+              textAlign: "center",
+            }}
+          >
             Shadow Drive Example App
           </h1>
           <div style={{ textAlign: "center" }}>
@@ -200,7 +238,9 @@ export default function Drive() {
 
       <Grid container>
         <Grid item xs={6}>
-          <div style={{ marginTop: "50px", maxWidth: "500px" }}>
+          <div
+            style={{ marginTop: "50px", maxWidth: "500px" }}
+          >
             <h2 style={{ marginBottom: "20px" }}>
               Create a Shadow Drive account:
             </h2>
@@ -220,8 +260,14 @@ export default function Drive() {
                 value={accName}
                 onChange={(e) => setAccName(e.target.value)}
               ></TextField>
-              <FormControl sx={{ marginLeft: "20px", width: "100px" }} focused>
-                <InputLabel id="size-select" color="secondary">
+              <FormControl
+                sx={{ marginLeft: "20px", width: "100px" }}
+                focused
+              >
+                <InputLabel
+                  id="size-select"
+                  color="secondary"
+                >
                   Size
                 </InputLabel>
                 <Select
@@ -243,8 +289,14 @@ export default function Drive() {
                   <MenuItem value={"50GB"}>50GB</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl sx={{ marginLeft: "20px", width: "100px" }} focused>
-                <InputLabel id="version-select" color="secondary">
+              <FormControl
+                sx={{ marginLeft: "20px", width: "100px" }}
+                focused
+              >
+                <InputLabel
+                  id="version-select"
+                  color="secondary"
+                >
                   Version
                 </InputLabel>
                 <Select
@@ -258,7 +310,9 @@ export default function Drive() {
                     color: "white",
                   }}
                   onChange={(e) => {
-                    setVersion(e.target.value as ShadowDriveVersion);
+                    setVersion(
+                      e.target.value as ShadowDriveVersion
+                    );
                   }}
                 >
                   <MenuItem value={"v1"}>v1</MenuItem>
@@ -317,30 +371,43 @@ export default function Drive() {
               >
                 {accs.map((acc, index) => {
                   return (
-                    <FormControlLabel
-                      key={index}
-                      value={acc.publicKey}
-                      control={<Radio />}
-                      checked={radioValue == acc.publicKey}
-                      label={
-                        acc.account.identifier +
-                        " - " +
-                        bytesToHuman(
-                          new anchor.BN(acc.account.storage).toNumber()
-                        ) +
-                        " drive"
-                      }
-                      onClick={(e) => {
-                        setAcc(acc);
-                      }}
-                    />
+                    <div key={index}>
+                      <FormControlLabel
+                        key={index}
+                        value={acc.publicKey}
+                        control={<Radio />}
+                        checked={
+                          radioValue == acc.publicKey
+                        }
+                        label={
+                          acc.account.identifier +
+                          " - " +
+                          bytesToHuman(
+                            new anchor.BN(
+                              acc.account.storage
+                            ).toNumber()
+                          ) +
+                          " drive"
+                        }
+                        onClick={(e) => {
+                          setAcc(acc);
+                        }}
+                      />
+                      <button onClick={deleteAccount}>
+                        Delete account
+                      </button>
+                    </div>
                   );
                 })}
               </RadioGroup>
             </FormControl>
           </div>
           <form style={{ marginTop: "50px" }}>
-            <Button color="secondary" variant="contained" component="label">
+            <Button
+              color="secondary"
+              variant="contained"
+              component="label"
+            >
               <input
                 type={"file"}
                 multiple
@@ -368,17 +435,25 @@ export default function Drive() {
 
           <div style={{ marginTop: "50px" }}>
             <h2 style={{ marginBottom: "10px" }}>
-              List of all uploaded files under selected account:
+              List of all uploaded files under selected
+              account:
             </h2>
             <ul>
               {uploadedFiles.length > 0
                 ? uploadedFiles.map((fileUrl, index) => (
                     <li key={index}>
-                      <a style={{ color: "white" }} href={fileUrl}>
+                      <a
+                        style={{ color: "white" }}
+                        href={fileUrl}
+                      >
                         {fileUrl.split("/").slice(-1)}
                       </a>
 
-                      <button onClick={() => handleDelete(fileUrl)}>
+                      <button
+                        onClick={() =>
+                          handleDelete(fileUrl)
+                        }
+                      >
                         Delete
                       </button>
                     </li>
